@@ -1,0 +1,25 @@
+name: Check official download links
+on:
+  workflow_dispatch:
+  push:
+    paths: [.github/workflows/check-downloads.yml]
+  release:
+    types: [published, edited]
+permissions:
+  contents: read
+jobs:
+  downloads:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the public homepage and both anonymous downloads
+        run: |
+          set -euo pipefail
+          curl --retry 2 -fsS https://streamhelper.cn/ -o index.html
+          for asset in Hudongya-Windows-x64.exe Hudongya-macOS-arm64.dmg; do
+            url="https://github.com/heyunhang/zhibo-downloads/releases/download/current/$asset"
+            grep -Fq "href=\"$url\"" index.html
+            curl --retry 2 -fsSL --range 0-127 --max-filesize 128 -D headers -o sample "$url"
+            test "$(wc -c < sample)" -eq 128
+            grep -Fiq "content-disposition: attachment; filename=$asset" headers
+          done
